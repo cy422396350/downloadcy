@@ -1,4 +1,6 @@
-# 并发下载文件个人练手项目
+
+# 并发下载文件个人练手项目,原项目作者： polarisxu git地址：https://github.com/polaris1119/downloader
+
 
 ### 启动命令：
 
