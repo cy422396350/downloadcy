@@ -1,4 +1,4 @@
-module github.com/cy422396350/downloadgo
+module github.com/cy422396350/downloadcy
 
 go 1.16
 

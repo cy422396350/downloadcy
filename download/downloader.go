@@ -1,4 +1,4 @@
-package main
+package download
 
 import (
 	"fmt"
@@ -14,14 +14,14 @@ import (
 
 type Downloader struct {
 	CpuNumbers int
-	Pro *progressbar.ProgressBar
+	Pro        *progressbar.ProgressBar
 }
 
 func NewDownloader(cpuNumbers int) *Downloader {
 	return &Downloader{CpuNumbers: cpuNumbers}
 }
 
-func (d *Downloader)Download(url,filename string) error {
+func (d *Downloader) Download(url, filename string) error {
 	/**
 	 *	确定文件的最后的名字,没有就用url最后的名字
 	 **/
@@ -34,13 +34,13 @@ func (d *Downloader)Download(url,filename string) error {
 		return err
 	}
 	if resp.StatusCode == http.StatusOK && resp.Header.Get("Accept-Ranges") == "bytes" {
-		  return d.MultiDownload(url,filename,int(resp.ContentLength))
+		return d.MultiDownload(url, filename, int(resp.ContentLength))
 	}
-	return d.SingleDownload(url,filename)
+	return d.SingleDownload(url, filename)
 }
 
 // 并发下载文件
-func (d *Downloader)MultiDownload(url,filename string,contentLen int) error {
+func (d *Downloader) MultiDownload(url, filename string, contentLen int) error {
 	// 返回的文件长度/cpu数量得到单次获取文件长度
 	partSize := contentLen / d.CpuNumbers
 
@@ -73,19 +73,19 @@ func (d *Downloader)MultiDownload(url,filename string,contentLen int) error {
 	rangeStart := 0
 	// 开始开goroutine
 	for i := 0; i < d.CpuNumbers; i++ {
-		go func(i,rangeStart int) {
+		go func(i, rangeStart int) {
 			defer wg.Done()
 
 			// 结束处是文件头加长度
-			rangeEnd := rangeStart+partSize
+			rangeEnd := rangeStart + partSize
 
 			// 最后一个是最大的len
 			if i == d.CpuNumbers-1 {
 				rangeEnd = contentLen
 			}
-			d.downloadPartial(url,filename,rangeStart,rangeEnd,i,d.Pro)
-		}(i,rangeStart)
-		 rangeStart += partSize + 1
+			d.downloadPartial(url, filename, rangeStart, rangeEnd, i, d.Pro)
+		}(i, rangeStart)
+		rangeStart += partSize + 1
 	}
 	wg.Wait()
 	err := d.merge(filename)
@@ -105,24 +105,23 @@ func (d *Downloader) merge(filename string) error {
 
 	for i := 0; i < d.CpuNumbers; i++ {
 		srcFileName := d.getPartFileName(filename, i)
-		srcFile,err := os.Open(srcFileName)
+		srcFile, err := os.Open(srcFileName)
 		if err != nil {
 			return err
 		}
-		io.Copy(destfile,srcFile)
+		io.Copy(destfile, srcFile)
 		srcFile.Close()
 		os.Remove(srcFileName)
 	}
 	return nil
 }
 
-
-func (d *Downloader)SingleDownload(url,filename string) error {
+func (d *Downloader) SingleDownload(url, filename string) error {
 	return nil
 }
 
 // 下载方法
-func (d *Downloader) downloadPartial(url, filename string, rangeStart, rangeEnd, i int,bar *progressbar.ProgressBar) {
+func (d *Downloader) downloadPartial(url, filename string, rangeStart, rangeEnd, i int, bar *progressbar.ProgressBar) {
 	if rangeStart >= rangeEnd {
 		return
 	}
@@ -144,7 +143,7 @@ func (d *Downloader) downloadPartial(url, filename string, rangeStart, rangeEnd,
 	}
 	defer partFile.Close()
 	buf := make([]byte, 32*1024)
-	_, err = io.CopyBuffer(io.MultiWriter(partFile, bar), resp.Body,buf)
+	_, err = io.CopyBuffer(io.MultiWriter(partFile, bar), resp.Body, buf)
 	if err != nil {
 		if err == io.EOF {
 			return
@@ -159,7 +158,7 @@ func (d *Downloader) getPartDir(filename string) string {
 }
 
 // 获取文件名
-func (d *Downloader) getPartFileName(filename string,partNumber int) string {
-	   partDir := d.getPartDir(filename)
-	   return fmt.Sprintf("%s%s-%d",partDir,filename,partNumber)
+func (d *Downloader) getPartFileName(filename string, partNumber int) string {
+	partDir := d.getPartDir(filename)
+	return fmt.Sprintf("%s%s-%d", partDir, filename, partNumber)
 }
