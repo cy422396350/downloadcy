@@ -2,6 +2,7 @@ package download
 
 import (
 	"fmt"
+	"github.com/k0kubun/go-ansi"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"log"
@@ -117,7 +118,34 @@ func (d *Downloader) merge(filename string) error {
 }
 
 func (d *Downloader) SingleDownload(url, filename string) error {
-	return nil
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	d.Pro = progressbar.NewOptions(
+		int(resp.ContentLength),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionSetDescription("downloading..."),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	buf := make([]byte, 32*1024)
+	_, err = io.CopyBuffer(io.MultiWriter(f, d.Pro), resp.Body, buf)
+	return err
 }
 
 // 下载方法
